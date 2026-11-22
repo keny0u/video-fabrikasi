@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Fabrikası</title>
+<style>
+:root {
+  --bg: #0e1014; --panel: #171a21; --panel-2: #1f232c; --line: #2c313c;
+  --text: #eceef2; --muted: #98a0ae; --accent: #4f8cff; --ok: #35c47c;
+  --warn: #f0b440; --bad: #f2555a; --radius: 14px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+header { display: flex; align-items: center; gap: 14px; padding: 18px 24px;
+  border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header h1 { font-size: 20px; margin: 0; }
+.tabs { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.tabs button { background: none; color: var(--muted); padding: 8px 14px; border: 0; }
+.tabs button.on { background: var(--panel-2); color: var(--text); }
+main { max-width: 1120px; margin: 0 auto; padding: 22px 24px 60px; }
+section { display: none; } section.on { display: block; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 18px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+.hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+button { font: inherit; cursor: pointer; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); padding: 8px 14px; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button:disabled { opacity: .5; cursor: default; }
+button.small { padding: 4px 10px; font-size: 13px; }
+input, select, textarea { font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; width: 100%; }
+textarea { min-height: 76px; resize: vertical; }
+label { display: block; font-size: 13px; color: var(--muted); }
+label > input, label > select, label > textarea { margin-top: 4px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.icon { width: 34px; height: 34px; flex: none; display: block; }
+.picks { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px;
+  position: relative; background: var(--panel-2); border: 2px solid var(--line); }
+.pick.on { border-color: var(--accent); background: #1c2a44; }
+.pick .tick { position: absolute; top: 8px; right: 10px; color: var(--accent); font-weight: 700;
+  visibility: hidden; }
+.pick.on .tick { visibility: visible; }
+.pick small { color: var(--muted); }
+.pick-actions { display: flex; gap: 8px; margin-top: 10px; }
+#drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 30px 16px;
+  text-align: center; color: var(--muted); cursor: pointer; }
+#drop.over { border-color: var(--accent); color: var(--text); }
+#picked { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+#picked li { padding: 4px 0; }
+.modes { display: flex; gap: 8px; flex-wrap: wrap; }
+.modes button.on { border-color: var(--accent); background: #1c2a44; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+.stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.stat { display: flex; gap: 12px; align-items: center; }
+.stat b { display: block; }
+.stat span { color: var(--muted); font-size: 13px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot.ok { background: var(--ok); } .dot.off { background: var(--muted); } .dot.bad { background: var(--bad); }
+.notice { background: #3a2c10; border: 1px solid #6b5120; color: #f5d68d; padding: 8px 12px;
+  border-radius: 9px; font-size: 13px; margin-top: 10px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
+.switch input { width: 18px; height: 18px; margin: 0; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; color: var(--muted); font-weight: 500; font-size: 13px; }
+th, td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td .icon { width: 22px; height: 22px; }
+.title { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--panel-2); white-space: nowrap; }
+.badge.done { color: var(--ok); } .badge.failed { color: var(--bad); }
+.badge.uploading { color: var(--accent); } .badge.queued { color: var(--warn); }
+.err { color: var(--bad); font-size: 12px; max-width: 340px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 16px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; display: none; max-width: 90vw; }
+#toast.bad { border-color: var(--bad); }
+.minipicks { display: flex; gap: 6px; flex-wrap: wrap; }
+.minipick { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 2px solid var(--line); }
+.minipick .icon { width: 20px; height: 20px; }
+.minipick.on { border-color: var(--accent); background: #1c2a44; }
+.source-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.source-tabs button.on { border-color: var(--accent); background: #1c2a44; }
+.bar { height: 6px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+.clipgrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-top: 14px; }
+.clip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px;
+  display: flex; flex-direction: column; gap: 8px; }
+.clip video { width: 100%; aspect-ratio: 9 / 16; background: #000; border-radius: 8px; }
+.clip .meta { font-size: 12px; color: var(--muted); }
+.jobhead { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.jobhead b { overflow-wrap: anywhere; }
+.framebox { position: relative; margin-top: 10px; max-width: 720px; touch-action: none; cursor: crosshair;
+  user-select: none; border-radius: 8px; overflow: hidden; background: #000; }
+.framebox img { display: block; width: 100%; pointer-events: none; }
+.framebox .sel { position: absolute; border: 3px solid var(--accent); background: rgba(79, 140, 255, .18);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45); }
+.layoutpick { width: auto; padding: 4px 8px; font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-youtube" viewBox="0 0 24 24">
+    <rect x="1" y="4" width="22" height="16" rx="5" fill="#ff0033"/>
+    <path d="M10 8.5v7l6-3.5z" fill="#fff"/>
+  </symbol>
+  <symbol id="i-youtube_shorts" viewBox="0 0 24 24">
+    <rect x="5" y="1.5" width="14" height="21" rx="5" fill="#ff0033"/>
+    <path d="M10 8.5v7l6-3.5z" fill="#fff"/>
+  </symbol>
+  <symbol id="i-tiktok" viewBox="0 0 24 24">
+    <path transform="translate(-.5 .5)" fill="#25f4ee" d="M12.5 0h3.9c.1 1.5.6 3.1 1.8 4.2 1.1 1.1 2.7 1.6 4.2 1.8V10c-1.4 0-2.9-.3-4.2-1-.6-.2-1.1-.5-1.6-.9v8.8c-.1 1.4-.5 2.8-1.4 3.9-1.3 1.9-3.5 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7v-1.5c.2-1.9 1.1-3.7 2.6-5 1.6-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.1 1.1-.1 1.6.2 1.7 1.8 3 3.5 2.9 1.1 0 2.2-.7 2.8-1.6.2-.3.4-.7.4-1.1.1-1.8.1-3.6.1-5.4V0z"/>
+    <path transform="translate(.5 -.5)" fill="#fe2c55" d="M12.5 0h3.9c.1 1.5.6 3.1 1.8 4.2 1.1 1.1 2.7 1.6 4.2 1.8V10c-1.4 0-2.9-.3-4.2-1-.6-.2-1.1-.5-1.6-.9v8.8c-.1 1.4-.5 2.8-1.4 3.9-1.3 1.9-3.5 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7v-1.5c.2-1.9 1.1-3.7 2.6-5 1.6-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.1 1.1-.1 1.6.2 1.7 1.8 3 3.5 2.9 1.1 0 2.2-.7 2.8-1.6.2-.3.4-.7.4-1.1.1-1.8.1-3.6.1-5.4V0z"/>
+    <path fill="#fff" d="M12.5 0h3.9c.1 1.5.6 3.1 1.8 4.2 1.1 1.1 2.7 1.6 4.2 1.8V10c-1.4 0-2.9-.3-4.2-1-.6-.2-1.1-.5-1.6-.9v8.8c-.1 1.4-.5 2.8-1.4 3.9-1.3 1.9-3.5 3.2-5.9 3.2-1.4.1-2.9-.3-4.1-1-2-1.2-3.4-3.4-3.6-5.7v-1.5c.2-1.9 1.1-3.7 2.6-5 1.6-1.4 4-2.1 6.1-1.7v4.4c-1-.3-2.1-.2-3 .4-.6.4-1.1 1-1.4 1.7-.2.5-.1 1.1-.1 1.6.2 1.7 1.8 3 3.5 2.9 1.1 0 2.2-.7 2.8-1.6.2-.3.4-.7.4-1.1.1-1.8.1-3.6.1-5.4V0z"/>
+  </symbol>
+  <symbol id="i-instagram_reels" viewBox="0 0 24 24">
+    <defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#feda75"/><stop offset=".4" stop-color="#fa7e1e"/>
+      <stop offset=".7" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/>
+    </linearGradient></defs>
+    <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="url(#ig)"/>
+    <circle cx="12" cy="12" r="4.8" fill="none" stroke="#fff" stroke-width="2"/>
+    <circle cx="17.6" cy="6.4" r="1.4" fill="#fff"/>
+  </symbol>
+</svg>
+
+<header>
+  <h1>Video Fabrikası</h1>
+  <span id="dryrun" class="badge queued" hidden>Deneme modu: gerçek yükleme yok</span>
+  <nav class="tabs">
+    <button data-tab="upload" class="on">Yükle</button>
+    <button data-tab="clips">Klip Üret</button>
+    <button data-tab="story">Hikaye</button>
+    <button data-tab="series">Dizi</button>
+    <button data-tab="queue">Kuyruk</button>
+    <button data-tab="schedule">Zamanlama</button>
+    <button data-tab="accounts">Hesaplar</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-upload" class="on">
+    <div class="card">
+      <h2>1. Nereye yüklensin?</h2>
+      <div class="picks" id="picks"></div>
+      <div class="pick-actions">
+        <button class="small" id="pickAll">Hepsini seç</button>
+        <button class="small" id="pickVertical">Dikey üçlü</button>
+        <button class="small" id="pickNone">Temizle</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>2. Dosyalar</h2>
+      <div id="drop">Video ya da görselleri buraya sürükle veya tıklayıp seç
+        <p class="hint">MP4, MOV, WebM, JPG, PNG, WebP. Görseller otomatik videoya çevrilir.</p>
+      </div>
+      <input type="file" id="fileInput" multiple hidden accept=".mp4,.mov,.webm,.jpg,.jpeg,.png,.webp">
+      <ul id="picked"></ul>
+    </div>
+    <div class="card">
+      <h2>3. Bilgiler</h2>
+      <div class="grid">
+        <label>Başlık (boş kalırsa dosya adı)<input id="title" maxlength="200"></label>
+        <label>Etiketler (virgülle)<input id="tags" placeholder="oyun, komik, shorts"></label>
+      </div>
+      <label style="margin-top:12px">Açıklama<textarea id="description"></textarea></label>
+    </div>
+    <div class="card">
+      <h2>4. Ne zaman?</h2>
+      <div class="modes" id="modes">
+        <button data-when="now" class="on">Şimdi, hepsine aynı anda</button>
+        <button data-when="queue">Sıraya ekle (aralıkla)</button>
+        <button data-when="at">Tarih ve saat seç</button>
+      </div>
+      <label id="atWrap" style="margin-top:12px;max-width:260px" hidden>Yayın zamanı<input type="datetime-local" id="at"></label>
+      <p class="hint" id="whenHint"></p>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="send">Yüklemeyi başlat</button>
+        <span class="hint" id="sendStatus"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-clips">
+    <div class="card">
+      <h2>Uzun videodan kısa klipler</h2>
+      <div class="source-tabs" id="clipSourceTabs">
+        <button data-source="url" class="on">YouTube linki</button>
+        <button data-source="file">Bilgisayardan dosya</button>
+      </div>
+      <label id="clipUrlWrap">Video linki<input id="clipUrl" placeholder="https://www.youtube.com/watch?v=..."></label>
+      <div id="clipFileWrap" hidden>
+        <input type="file" id="clipFile" accept=".mp4,.mov,.webm,.mkv">
+      </div>
+      <p class="hint">Kendi videolarını ya da kullanma iznin olan videoları kullan. Başkasının videosunu paylaşmak telif ihlalidir.</p>
+      <div class="grid" style="margin-top:12px">
+        <label>Kaç klip<input type="number" id="clipCount" min="1" max="20" value="5"></label>
+        <label>En kısa (sn)<input type="number" id="clipMin" min="5" max="170" value="20"></label>
+        <label>En uzun (sn)<input type="number" id="clipMax" min="10" max="180" value="60"></label>
+        <label>Konuşma dili<select id="clipLang">
+          <option value="">Otomatik bul</option><option value="tr">Türkçe</option><option value="en">İngilizce</option>
+        </select></label>
+        <label>Ne tür anlar?<select id="clipMode">
+          <option value="genel">Genel: heyecanlı konuşmalar</option>
+          <option value="korku">Korku: jumpscare ve irkilmeler</option>
+          <option value="komik">Komik: gülme anları</option>
+          <option value="elle">Elle: zamanları ben yazacağım</option>
+          <option value="kelime">Kelime: şu kelimenin geçtiği yerler</option>
+        </select></label>
+        <label>Kamera boyutu<select id="clipCamSize">
+          <option value="kucuk">Küçük</option><option value="orta" selected>Orta</option><option value="buyuk">Büyük</option>
+        </select></label>
+        <label>Düzen<select id="clipLayout">
+          <option value="auto">Otomatik: yüz takibi ya da bulanık</option>
+          <option value="split">Oyun: kamera üstte, oyun ekranı doldurur</option>
+          <option value="split_fit">Oyun: kamera üstte, oyunun tamamı görünür</option>
+        </select></label>
+      </div>
+      <label id="clipManualWrap" style="margin-top:12px" hidden>Zaman aralıkları (her biri en fazla 3 dk)
+        <textarea id="clipManual" placeholder="12:30-13:10, 25:05-25:40, 1:02:10-1:02:45"></textarea></label>
+      <label id="clipKeywordWrap" style="margin-top:12px" hidden>Aranacak kelime ya da söz
+        <input id="clipKeyword" placeholder="korktum"></label>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="clipAsk"> Oyun düzeninde kamera kutusunu her videoda bana sor</label>
+      <p class="hint">Kapalıysa son işaretlediğin kutu sormadan kullanılır. Kamera hep aynı yerdeyse kapat, tam otomatik çalışsın.</p>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="clipSubs" checked> Kelime kelime altyazı ekle</label>
+      <div style="margin-top:12px">
+        <label>Hazır klipleri onaysız, aralıkla sıraya ekle (boş bırakırsan önce sen bakarsın)</label>
+        <div class="minipicks" id="clipAuto" style="margin-top:6px"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="clipStart">Klipleri üret</button>
+        <span class="hint" id="clipStatus"></span>
+      </div>
+    </div>
+    <div id="clipJobs"></div>
+  </section>
+
+  <section id="tab-story">
+    <div class="card">
+      <h2>Hikayeden animasyonlu Shorts</h2>
+      <p class="hint">Hikayeyi yapıştır: Claude 45-55 saniyelik bir anlatıma çevirir, Türkçe seslendirilir, her sahnenin görseli
+        ekran kartında çizilir, altyazı ve fon müziğiyle dikey video olur. Fon müziği için telifsiz müzik dosyalarını
+        proje klasöründeki <b>muzik</b> klasörüne koy.</p>
+      <label style="margin-top:12px">Hikaye<textarea id="storyText" style="min-height:180px"
+        placeholder="Gerçek yaşanmış ya da kendi yazdığın hikaye..."></textarea></label>
+      <div class="grid" style="margin-top:12px">
+        <label>Ses<select id="storyVoice"><option value="kadin">Kadın anlatıcı (doğal)</option><option value="erkek">Erkek anlatıcı (doğal)</option><option value="emel">Emel (hızlı, düz)</option><option value="ahmet">Ahmet (hızlı, düz)</option></select></label>
+        <label>Çizim tarzı<select id="storyStyle">
+          <option value="cizgi">Çizgi film (düz 2D)</option><option value="gercekci">Sinematik gerçekçi</option>
+          <option value="korku">Karanlık korku</option><option value="anime">Anime</option>
+        </select></label>
+      </div>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="storyMusic" checked> Fon müziği ekle</label>
+      <div style="margin-top:12px">
+        <label>Hazır olunca onaysız, aralıkla sıraya ekle (boş bırakırsan önce sen bakarsın)</label>
+        <div class="minipicks" id="storyAuto" style="margin-top:6px"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="storyStart">Hikaye videosu üret</button>
+        <span class="hint" id="storyStatus"></span>
+      </div>
+    </div>
+    <div id="storyJobs"></div>
+  </section>
+
+  <section id="tab-series">
+    <div class="card">
+      <h2>Seçimli dizi (izleyici yönetir)</h2>
+      <p class="hint">Konuyu yaz: Claude dizi kitapçığını ve bölümleri yazar. Her bölüm A/B seçimiyle biter; yayınlanan bölümün
+        YouTube ve Instagram yorumlarındaki oylar sayılır, süre dolunca kazanan seçimle sonraki bölüm kendiliğinden üretilir.
+        TikTok ve hikâye anketi oylarını bölüm satırından elle ekleyebilirsin.</p>
+      <label style="margin-top:12px">Dizinin konusu<textarea id="seriesPremise" style="min-height:140px"
+        placeholder="Ör. Gece bekçisi Kaan, ormanın ortasındaki eski bir kuleye atanır. Kulenin üç kuralı vardır..."></textarea></label>
+      <div class="grid" style="margin-top:12px">
+        <label>Bölüm sayısı<input type="number" id="seriesEpisodes" min="3" max="20" value="10"></label>
+        <label>Oylama süresi (saat)<input type="number" id="seriesHours" min="1" max="72" value="20"></label>
+        <label>Ses<select id="seriesVoice"><option value="kadin">Kadın anlatıcı (doğal)</option><option value="erkek">Erkek anlatıcı (doğal)</option><option value="emel">Emel (hızlı, düz)</option><option value="ahmet">Ahmet (hızlı, düz)</option></select></label>
+        <label>Çizim tarzı<select id="seriesStyle">
+          <option value="korku">Karanlık korku</option><option value="cizgi">Çizgi film (düz 2D)</option>
+          <option value="gercekci">Sinematik gerçekçi</option><option value="anime">Anime</option>
+        </select></label>
+      </div>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="seriesMusic" checked> Fon müziği ekle</label>
+      <div style="margin-top:12px">
+        <label>Bölümler hazır olunca hemen buralara yayınlansın (oylama yayından itibaren işler)</label>
+        <div class="minipicks" id="seriesAuto" style="margin-top:6px"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="primary" id="seriesStart">Diziyi başlat</button></div>
+    </div>
+    <div id="seriesList"></div>
+    <div id="seriesJobs"></div>
+  </section>
+
+  <section id="tab-queue">
+    <div class="card"><div class="stats" id="stats"></div></div>
+    <div class="card">
+      <h2>İşler</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th></th><th>Başlık</th><th>Durum</th><th>Zaman</th><th></th></tr></thead>
+        <tbody id="jobs"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="tab-schedule"><div id="schedules"></div></section>
+
+  <section id="tab-accounts">
+    <div class="card">
+      <div class="row"><svg class="icon"><use href="#i-youtube"/></svg>
+        <div><h2 style="margin:0">YouTube ve Shorts</h2><span class="hint" id="ytState"></span></div></div>
+      <div class="row" style="margin-top:12px">
+        <label>client_secret JSON<input type="file" id="ytClient" accept=".json"></label>
+        <button id="ytUpload">Dosyayı kaydet</button>
+        <button class="primary" id="ytConnect">Hesabı bağla</button>
+      </div>
+      <h2 style="margin:16px 0 4px;font-size:14px">Video indirme çerezi <span class="hint" id="ytCookieState"></span></h2>
+      <p class="hint">YouTube "bot musun" deyip video indirmeyi engellerse gerekir. Chrome'a "Get cookies.txt LOCALLY"
+        eklentisini kur, gizli pencerede youtube.com'a giriş yap, çerezleri dışa aktar, gizli pencereyi kapat ve
+        dosyayı buraya yükle. Mümkünse ana kanalın değil, ikinci bir Google hesabının çerezini kullan.</p>
+      <div class="row" style="margin-top:8px">
+        <label>cookies.txt<input type="file" id="ytCookies" accept=".txt"></label>
+        <button id="ytCookiesSave">Çerezi kaydet</button>
+        <button id="ytCookiesRemove">Çerezi sil</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row"><svg class="icon"><use href="#i-tiktok"/></svg>
+        <div><h2 style="margin:0">TikTok</h2><span class="hint" id="ttState"></span></div></div>
+      <div class="grid" style="margin-top:12px">
+        <label>Client key<input id="ttKey" autocomplete="off"></label>
+        <label>Client secret<input id="ttSecret" type="password" autocomplete="off" placeholder="Değişmeyecekse boş bırak"></label>
+        <label>Yükleme modu<select id="ttMode">
+          <option value="inbox">Taslak: telefonda onaylarsın</option>
+          <option value="direct">Direkt (TikTok onayı olmadan yalnızca gizli)</option>
+        </select></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="ttSave">Kaydet</button>
+        <button class="primary" id="ttConnect">Hesabı bağla</button>
+      </div>
+      <p class="hint">TikTok, taslak modunda 24 saatte en fazla 5 bekleyen taslak kabul eder.</p>
+    </div>
+    <div class="card">
+      <div class="row"><svg class="icon"><use href="#i-instagram_reels"/></svg>
+        <div><h2 style="margin:0">Instagram Reels</h2><span class="hint" id="igState"></span></div></div>
+      <div class="grid" style="margin-top:12px">
+        <label>Instagram hesap kimliği<input id="igId" inputmode="numeric" autocomplete="off"></label>
+        <label>Erişim anahtarı<input id="igToken" type="password" autocomplete="off"></label>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="primary" id="igSave">Kaydet ve bağla</button></div>
+    </div>
+    <div class="card">
+      <div><h2 style="margin:0">Claude (başlık ve açıklama yazarı)</h2><span class="hint" id="clState"></span></div>
+      <p class="hint">Bağlıysa klip başlıklarını, açıklamalarını ve etiketlerini Claude yazar; değilse ücretsiz yöntem kullanılır.
+        Anahtarı console.anthropic.com adresinde API Keys bölümünden oluşturabilirsin.</p>
+      <div class="row" style="margin-top:12px">
+        <label style="flex:1">API anahtarı<input id="clKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
+        <button class="primary" id="clSave">Kaydet ve doğrula</button>
+        <button id="clRemove">Kaldır</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Otomatik başlatma</h2>
+      <label class="switch"><input type="checkbox" id="autostart"> Windows açılınca fabrikayı arka planda başlat</label>
+      <p class="hint">Yükleme için bilgisayar açık ve internete bağlı olmalı.</p>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const LABELS = {youtube: "YouTube", youtube_shorts: "Shorts", tiktok: "TikTok", instagram_reels: "Reels"};
+const VERTICAL = ["youtube_shorts", "tiktok", "instagram_reels"];
+const STATUS = {queued: "Bekliyor", uploading: "Yükleniyor", done: "Tamam", failed: "Hata"};
+const $ = id => document.getElementById(id);
+const icon = t => `<svg class="icon" aria-label="${LABELS[t]}"><use href="#i-${t}"/></svg>`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = {mode: "now"};
+const selected = new Set();
+let files = [], state = null, schedulesBuilt = false;
+
+function toast(message, bad) {
+  const box = $("toast");
+  box.textContent = message;
+  box.className = bad ? "bad" : "";
+  box.style.display = "block";
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => box.style.display = "none", 4500);
+}
+
+async function post(url, body, isForm) {
+  const options = {method: "POST"};
+  if (isForm) options.body = body;
+  else if (body !== undefined) {
+    options.body = JSON.stringify(body);
+    options.headers = {"Content-Type": "application/json"};
+  }
+  const response = await fetch(url, options);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { toast(data.error || "İşlem başarısız.", true); return null; }
+  refresh();
+  return data;
+}
+
+document.querySelectorAll(".tabs button").forEach(button => button.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b === button));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("on", s.id === "tab-" + button.dataset.tab));
+});
+
+function renderPicks() {
+  $("picks").innerHTML = Object.keys(LABELS).map(t => {
+    const info = state && state.targets.find(x => x.target === t);
+    const note = !info ? "" : info.connected ? "Bağlı" : "Bağlı değil";
+    return `<button class="pick ${selected.has(t) ? "on" : ""}" data-target="${t}" aria-pressed="${selected.has(t)}">
+      <span class="tick">✓</span>${icon(t)}<b>${LABELS[t]}</b><small>${note}</small></button>`;
+  }).join("");
+  document.querySelectorAll(".pick").forEach(b => b.onclick = () => {
+    const t = b.dataset.target;
+    selected.has(t) ? selected.delete(t) : selected.add(t);
+    renderPicks();
+  });
+}
+function setPicks(list) { selected.clear(); list.forEach(t => selected.add(t)); renderPicks(); }
+$("pickAll").onclick = () => setPicks(Object.keys(LABELS));
+$("pickVertical").onclick = () => setPicks(VERTICAL);
+$("pickNone").onclick = () => setPicks([]);
+
+function renderFiles() {
+  $("picked").innerHTML = files.map((f, i) =>
+    `<li class="row spread">${esc(f.name)} (${(f.size / 1048576).toFixed(1)} MB)
+      <button class="small" data-remove="${i}">Çıkar</button></li>`).join("");
+  document.querySelectorAll("[data-remove]").forEach(b => b.onclick = () => {
+    files.splice(Number(b.dataset.remove), 1);
+    renderFiles();
+  });
+}
+function setFiles(list) { files = [...files, ...list]; renderFiles(); }
+$("drop").onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => { setFiles(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach(n => $("drop").addEventListener(n, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(n => $("drop").addEventListener(n, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => setFiles(e.dataTransfer.files));
+
+function updateWhen() {
+  document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.when === when.mode));
+  $("atWrap").hidden = when.mode !== "at";
+  $("whenHint").textContent = {
+    now: "Seçtiğin her platforma aynı anda başlar, aralık beklenmez.",
+    queue: "Zamanlama sekmesindeki aralığa göre sırayla yayınlanır. O platformun otomatik yayını açık olmalı.",
+    at: "Seçtiğin anda hepsine birden yüklenir. O saatte bilgisayar açık olmalı.",
+  }[when.mode];
+}
+document.querySelectorAll("#modes button").forEach(b => b.onclick = () => { when.mode = b.dataset.when; updateWhen(); });
+
+$("send").onclick = () => {
+  if (!selected.size) return toast("Önce platform seç.", true);
+  if (!files.length) return toast("Önce dosya seç.", true);
+  if (when.mode === "at" && !$("at").value) return toast("Tarih ve saat seç.", true);
+  const form = new FormData();
+  selected.forEach(t => form.append("targets", t));
+  files.forEach(f => form.append("files", f));
+  ["title", "tags", "description", "at"].forEach(k => form.append(k, $(k).value));
+  form.append("when", when.mode);
+
+  // fetch yükleme ilerlemesi vermediği için XHR kullanılıyor.
+  const request = new XMLHttpRequest();
+  request.open("POST", "/api/upload");
+  request.upload.onprogress = e => {
+    if (e.lengthComputable) $("sendStatus").textContent = `Panele aktarılıyor: %${Math.round(e.loaded / e.total * 100)}`;
+  };
+  request.upload.onload = () => $("sendStatus").textContent = "Dosyalar hazırlanıyor…";
+  request.onloadend = () => {
+    $("send").disabled = false;
+    $("sendStatus").textContent = "";
+    let data = {};
+    try { data = JSON.parse(request.responseText); } catch {}
+    if (request.status !== 200) return toast(data.error || "Yükleme başarısız.", true);
+    toast(`${data.files} dosya ${data.targets} platform için eklendi.`);
+    files = [];
+    renderFiles();
+    ["title", "tags", "description"].forEach(k => $(k).value = "");
+    refresh();
+  };
+  $("send").disabled = true;
+  request.send(form);
+};
+
+function clock(ts) {
+  return ts ? new Date(ts * 1000).toLocaleString("tr-TR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"}) : "";
+}
+
+function renderStats() {
+  $("stats").innerHTML = state.targets.map(t => {
+    const paused = t.paused_until > state.now;
+    const dot = paused ? "bad" : t.connected ? "ok" : "off";
+    const line = paused ? "Duraklatıldı" : !t.connected ? "Bağlı değil" : t.enabled ? "Otomatik yayın açık" : "Otomatik yayın kapalı";
+    return `<div class="stat">${icon(t.target)}<div><b><i class="dot ${dot}"></i>${line}</b>
+      <span>${t.queued} bekliyor · bugün ${t.done_today} · ${t.failed} hata</span></div></div>`;
+  }).join("");
+}
+
+function jobTime(job) {
+  if (job.status === "done" || job.status === "failed") return clock(job.finished_at);
+  if (job.status === "queued" && job.next_attempt_at > state.now) return clock(job.next_attempt_at);
+  if (job.status === "queued") return job.immediate ? "Hemen" : "Aralıkla";
+  return "";
+}
+
+function renderJobs() {
+  const rows = state.jobs.map(job => {
+    const actions = [];
+    if (job.status === "queued") actions.push(`<button class="small" data-job="${job.id}" data-act="now">Şimdi</button>`);
+    if (job.status === "failed") actions.push(`<button class="small" data-job="${job.id}" data-act="retry">Tekrar dene</button>`);
+    if (job.status === "queued" || job.status === "failed") actions.push(`<button class="small" data-job="${job.id}" data-act="delete">Sil</button>`);
+    const link = job.remote_url ? ` <a href="${esc(job.remote_url)}" target="_blank" rel="noopener">Aç</a>` : "";
+    const problem = job.error ? `<div class="err">${esc(job.error)}</div>` : "";
+    return `<tr><td>${icon(job.target)}</td><td><div class="title" title="${esc(job.title)}">${esc(job.title)}</div>${problem}</td>
+      <td><span class="badge ${job.status}">${STATUS[job.status]}</span>${link}</td>
+      <td>${jobTime(job)}</td><td><div class="row">${actions.join("")}</div></td></tr>`;
+  });
+  $("jobs").innerHTML = rows.join("") || `<tr><td colspan="5" class="hint">Henüz iş yok.</td></tr>`;
+  document.querySelectorAll("[data-job]").forEach(b => b.onclick = () => {
+    if (b.dataset.act === "delete" && !confirm("Bu iş kuyruktan silinsin mi?")) return;
+    post(`/api/jobs/${b.dataset.job}/${b.dataset.act}`);
+  });
+}
+
+function buildSchedules() {
+  $("schedules").innerHTML = state.targets.map(t => `
+    <div class="card" data-schedule="${t.target}">
+      <div class="row spread">
+        <div class="row">${icon(t.target)}<h2 style="margin:0">${t.label}</h2></div>
+        <label class="switch"><input type="checkbox" data-f="enabled" ${t.enabled ? "checked" : ""}> Otomatik yayın</label>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <label>Her<input type="number" min="1" step="any" data-f="interval_value" value="${t.interval_value}"></label>
+        <label>Birim<select data-f="interval_unit">
+          ${[["sn", "saniye"], ["dk", "dakika"], ["saat", "saat"], ["gun", "gün"]].map(([v, l]) =>
+            `<option value="${v}" ${v === t.interval_unit ? "selected" : ""}>${l}</option>`).join("")}
+        </select></label>
+        <label>Başlangıç saati<input type="time" data-f="window_start" value="${t.window_start}"></label>
+        <label>Bitiş saati<input type="time" data-f="window_end" value="${t.window_end}"></label>
+        <label>Günlük en fazla<input type="number" min="0" data-f="daily_limit" value="${t.daily_limit}"></label>
+        ${t.target === "instagram_reels" ? "" : `<label>Görünürlük<select data-f="privacy">
+          ${(t.target === "tiktok" ? [["public", "Herkese açık"], ["private", "Gizli"]]
+            : [["public", "Herkese açık"], ["unlisted", "Liste dışı"], ["private", "Gizli"]]).map(([v, l]) =>
+            `<option value="${v}" ${v === t.privacy ? "selected" : ""}>${l}</option>`).join("")}
+        </select></label>`}
+      </div>
+      <div class="notice" data-paused hidden></div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" data-save>Kaydet</button>
+        <button data-resume hidden>Devam ettir</button>
+        <span class="hint" data-next></span>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll("[data-schedule]").forEach(card => {
+    const target = card.dataset.schedule;
+    card.querySelector("[data-save]").onclick = async () => {
+      const body = {};
+      card.querySelectorAll("[data-f]").forEach(el => body[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value);
+      if (await post(`/api/targets/${target}`, body)) toast(`${LABELS[target]} kaydedildi.`);
+    };
+    card.querySelector("[data-resume]").onclick = () => post(`/api/targets/${target}/resume`);
+  });
+  schedulesBuilt = true;
+}
+
+function renderScheduleStatus() {
+  state.targets.forEach(t => {
+    const card = document.querySelector(`[data-schedule="${t.target}"]`);
+    const paused = t.paused_until > state.now;
+    const notice = card.querySelector("[data-paused]");
+    notice.hidden = !paused;
+    notice.textContent = paused ? t.paused_reason : "";
+    card.querySelector("[data-resume]").hidden = !paused;
+    card.querySelector("[data-next]").textContent = t.enabled && t.next_run_at > state.now ? `Sıradaki: ${clock(t.next_run_at)}` : "";
+  });
+}
+
+function renderAccounts() {
+  const a = state.accounts;
+  const line = (ok, status, idle) => status || (ok ? "Bağlı" : idle);
+  $("ytCookieState").textContent = a.youtube.cookies ? "(yüklü)" : "(yok)";
+  $("ytState").textContent = line(a.youtube.connected, a.youtube.status, a.youtube.client_ready ? "Dosya hazır, hesabı bağla" : "client_secret dosyası gerekli");
+  $("ttState").textContent = line(a.tiktok.connected, a.tiktok.status, a.tiktok.client_ready ? "Anahtarlar hazır, hesabı bağla" : "Client key gerekli");
+  $("igState").textContent = line(a.instagram.connected, "", "Bağlı değil");
+  $("clState").textContent = a.claude.connected ? "Bağlı" : "Bağlı değil, ücretsiz yöntem kullanılıyor";
+  if (document.activeElement !== $("ttKey") && !$("ttKey").value) $("ttKey").value = a.tiktok.client_key;
+  if (document.activeElement !== $("igId") && !$("igId").value) $("igId").value = a.instagram.ig_user_id;
+  if (document.activeElement !== $("ttMode")) $("ttMode").value = a.tiktok.mode;
+  $("autostart").checked = state.autostart;
+}
+
+$("ytUpload").onclick = async () => {
+  if (!$("ytClient").files[0]) return toast("JSON dosyasını seç.", true);
+  const form = new FormData();
+  form.append("file", $("ytClient").files[0]);
+  if (await post("/api/accounts/youtube/client", form, true)) toast("Dosya kaydedildi.");
+};
+$("ytConnect").onclick = () => post("/api/accounts/youtube/connect");
+$("ytCookiesSave").onclick = async () => {
+  if (!$("ytCookies").files[0]) return toast("cookies.txt dosyasını seç.", true);
+  const form = new FormData();
+  form.append("file", $("ytCookies").files[0]);
+  if (await post("/api/accounts/youtube/cookies", form, true)) { $("ytCookies").value = ""; toast("Çerez kaydedildi."); }
+};
+$("ytCookiesRemove").onclick = async () => {
+  if (await post("/api/accounts/youtube/cookies", new FormData(), true)) toast("Çerez silindi.");
+};
+$("ttSave").onclick = async () => {
+  const body = {client_key: $("ttKey").value, client_secret: $("ttSecret").value, mode: $("ttMode").value};
+  if (await post("/api/accounts/tiktok", body)) { $("ttSecret").value = ""; toast("TikTok ayarları kaydedildi."); }
+};
+$("ttConnect").onclick = () => post("/api/accounts/tiktok/connect");
+$("igSave").onclick = async () => {
+  if (await post("/api/accounts/instagram", {ig_user_id: $("igId").value, access_token: $("igToken").value})) {
+    $("igToken").value = "";
+    toast("Instagram kaydedildi.");
+  }
+};
+$("autostart").onchange = e => post("/api/autostart", {enabled: e.target.checked});
+$("clSave").onclick = async () => {
+  if (!$("clKey").value.trim()) return toast("Anahtarı yapıştır.", true);
+  $("clSave").disabled = true;
+  const done = await post("/api/accounts/claude", {api_key: $("clKey").value});
+  $("clSave").disabled = false;
+  if (done) { $("clKey").value = ""; toast("Claude bağlandı."); }
+};
+$("clRemove").onclick = async () => {
+  if (await post("/api/accounts/claude", {api_key: ""})) toast("Claude anahtarı kaldırıldı.");
+};
+
+const VERTICAL_LABELS = VERTICAL.concat(["youtube"]);
+const clipAuto = new Set();
+let clipSource = "url";
+const renderedJobs = {};
+
+function miniPicks(container, chosen, onChange) {
+  container.innerHTML = VERTICAL_LABELS.map(t =>
+    `<button class="minipick ${chosen.has(t) ? "on" : ""}" data-t="${t}" aria-pressed="${chosen.has(t)}">${icon(t)}${LABELS[t]}</button>`).join("");
+  container.querySelectorAll(".minipick").forEach(b => b.onclick = () => {
+    const t = b.dataset.t;
+    chosen.has(t) ? chosen.delete(t) : chosen.add(t);
+    miniPicks(container, chosen, onChange);
+    if (onChange) onChange();
+  });
+}
+miniPicks($("clipAuto"), clipAuto);
+
+document.querySelectorAll("#clipSourceTabs button").forEach(b => b.onclick = () => {
+  clipSource = b.dataset.source;
+  document.querySelectorAll("#clipSourceTabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("clipUrlWrap").hidden = clipSource !== "url";
+  $("clipFileWrap").hidden = clipSource !== "file";
+});
+
+$("clipStart").onclick = () => {
+  const form = new FormData();
+  if (clipSource === "url") {
+    if (!$("clipUrl").value.trim()) return toast("Video linkini yapıştır.", true);
+    form.append("url", $("clipUrl").value.trim());
+  } else {
+    if (!$("clipFile").files[0]) return toast("Video dosyasını seç.", true);
+    form.append("file", $("clipFile").files[0]);
+  }
+  form.append("count", $("clipCount").value);
+  form.append("min_len", $("clipMin").value);
+  form.append("max_len", $("clipMax").value);
+  form.append("language", $("clipLang").value);
+  form.append("subtitles", $("clipSubs").checked ? "1" : "0");
+  form.append("layout", $("clipLayout").value);
+  form.append("mode", $("clipMode").value);
+  form.append("camera_size", $("clipCamSize").value);
+  form.append("manual", $("clipManual").value);
+  form.append("keyword", $("clipKeyword").value);
+  clipAuto.forEach(t => form.append("auto_targets", t));
+
+  const request = new XMLHttpRequest();
+  request.open("POST", "/api/clips");
+  request.upload.onprogress = e => {
+    if (e.lengthComputable) $("clipStatus").textContent = `Dosya aktarılıyor: %${Math.round(e.loaded / e.total * 100)}`;
+  };
+  request.onloadend = () => {
+    $("clipStart").disabled = false;
+    $("clipStatus").textContent = "";
+    let data = {};
+    try { data = JSON.parse(request.responseText); } catch {}
+    if (request.status !== 200) return toast(data.error || "Başlatılamadı.", true);
+    toast("Klip üretimi sıraya alındı.");
+    $("clipUrl").value = "";
+    $("clipFile").value = "";
+    refresh();
+  };
+  $("clipStart").disabled = true;
+  request.send(form);
+};
+
+const JOB_STATUS = {queued: "Sırada", running: "Çalışıyor", done: "Bitti", failed: "Hata", waiting_box: "Kamera kutusu bekleniyor"};
+const LAYOUT_NAMES = {auto: "Otomatik düzen", split: "Oyun: ekranı doldur", split_fit: "Oyun: tamamı görünsün"};
+const MODE_NAMES = {genel: "Genel anlar", korku: "Korku anları", komik: "Komik anlar"};
+const CAMERA_NAMES = {kucuk: "Küçük kamera", orta: "Orta kamera", buyuk: "Büyük kamera"};
+const options = (names, chosen) => Object.entries(names).map(([v, l]) =>
+  `<option value="${v}" ${v === chosen ? "selected" : ""}>${l}</option>`).join("");
+const SPLIT = ["split", "split_fit"];
+const FRAME_POINTS = [0.1, 0.3, 0.5, 0.7, 0.9];
+const editors = {};
+const boxFrom = list => list ? {x: list[0], y: list[1], w: list[2], h: list[3]} : null;
+
+function editorState(job) {
+  if (!editors[job.id]) {
+    editors[job.id] = {box: boxFrom(job.settings.facecam || state.facecam), at: 1, open: false, dirty: false};
+  }
+  const editor = editors[job.id];
+  if (job.status === "waiting_box") editor.open = true;
+  return editor;
+}
+
+function boxEditor(job, editor) {
+  // Videonun karesi üzerinde fareyle kamera kutusu çizilir; oranlar olarak saklanır.
+  const wrap = document.createElement("div");
+  wrap.style.marginTop = "12px";
+  wrap.innerHTML = `
+    <p class="hint">Kameranın üstüne fareyle bir dikdörtgen çiz. Son kullandığın kutu hazır çizili gelir.
+      Kamera sahneye göre sağa, sola, üste ya da alta geçiyorsa bir konumu çizmen yeterli; her klipte kameranın
+      nerede olduğu otomatik bulunur.</p>
+    <div class="framebox"><img alt="Videodan kare"><div class="sel" hidden></div></div>
+    <div class="row" style="margin-top:10px">
+      <button class="small" data-next>Başka kare</button>
+      <button class="small primary" data-save>${job.status === "waiting_box" ? "Onayla ve devam et" : "Kutuyu kaydet"}</button>
+      ${job.status === "waiting_box" ? "" : `<span class="hint">Kaydettikten sonra Yeniden üret'e bas.</span>`}
+    </div>`;
+  const frame = wrap.querySelector(".framebox"), img = wrap.querySelector("img"), sel = wrap.querySelector(".sel");
+  const draw = () => {
+    sel.hidden = !editor.box;
+    if (editor.box) Object.assign(sel.style, {
+      left: `${editor.box.x * 100}%`, top: `${editor.box.y * 100}%`,
+      width: `${editor.box.w * 100}%`, height: `${editor.box.h * 100}%`,
+    });
+  };
+  const point = e => {
+    const rect = img.getBoundingClientRect(), clamp = v => Math.min(1, Math.max(0, v));
+    return {x: clamp((e.clientX - rect.left) / rect.width), y: clamp((e.clientY - rect.top) / rect.height)};
+  };
+  let start = null;
+  frame.addEventListener("pointerdown", e => { start = point(e); frame.setPointerCapture(e.pointerId); });
+  frame.addEventListener("pointermove", e => {
+    if (!start) return;
+    const p = point(e);
+    editor.box = {x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), w: Math.abs(p.x - start.x), h: Math.abs(p.y - start.y)};
+    editor.dirty = true;
+    draw();
+  });
+  frame.addEventListener("pointerup", () => start = null);
+  const load = () => img.src = `/api/clip-jobs/${job.id}/kare.jpg?at=${FRAME_POINTS[editor.at]}`;
+  wrap.querySelector("[data-next]").onclick = () => { editor.at = (editor.at + 1) % FRAME_POINTS.length; load(); };
+  wrap.querySelector("[data-save]").onclick = async () => {
+    if (!editor.box) return toast("Önce kameranın üstüne kutuyu çiz.", true);
+    if (await post(`/api/clip-jobs/${job.id}/facecam`, editor.box)) {
+      editor.dirty = false;
+      editor.open = false;
+      toast(job.status === "waiting_box" ? "Kutu kaydedildi, üretim devam ediyor." : "Kutu kaydedildi.");
+    }
+  };
+  load();
+  draw();
+  return wrap;
+}
+const MODES = {track: "Yüz takibi", blur: "Bulanık arka plan", fit: "Zaten dikey"};
+const seconds = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+function clipCard(clip) {
+  const picks = new Set(VERTICAL);
+  const card = document.createElement("div");
+  card.className = "clip";
+  card.innerHTML = `
+    <video src="/klip/${clip.id}.mp4" controls preload="metadata" playsinline></video>
+    <input value="${esc(clip.title)}" aria-label="Klip başlığı" data-title>
+    <details><summary class="hint">Açıklama ve etiketler</summary>
+      <textarea data-desc aria-label="Klip açıklaması" style="margin-top:6px;min-height:120px">${esc(clip.description || "")}</textarea>
+    </details>
+    <div class="meta">${seconds(clip.start)} - ${seconds(clip.end)} · ${Math.round(clip.end - clip.start)} sn · ${MODES[clip.mode] || ""}</div>
+    ${clip.sent ? `<span class="badge done">Kuyruğa gönderildi</span>` : ""}
+    <div class="minipicks"></div>
+    <div class="row">
+      <button class="small primary" data-send="now">Şimdi yükle</button>
+      <button class="small" data-send="queue">Sıraya ekle</button>
+      <button class="small" data-del>Sil</button>
+    </div>`;
+  miniPicks(card.querySelector(".minipicks"), picks);
+  card.querySelectorAll("[data-send]").forEach(b => b.onclick = async () => {
+    if (!picks.size) return toast("Platform seç.", true);
+    const body = {targets: [...picks], when: b.dataset.send, title: card.querySelector("[data-title]").value,
+                  description: card.querySelector("[data-desc]").value};
+    if (await post(`/api/clips/${clip.id}/send`, body)) toast("Klip kuyruğa eklendi.");
+  });
+  card.querySelector("[data-del]").onclick = () => {
+    if (confirm("Bu klip silinsin mi?")) post(`/api/clips/${clip.id}/delete`);
+  };
+  return card;
+}
+
+function renderClipJobs() {
+  renderJobList($("clipJobs"), state.clip_jobs.filter(job => !["story", "episode"].includes(job.settings.kind)));
+  renderJobList($("storyJobs"), state.clip_jobs.filter(job => job.settings.kind === "story"));
+  renderJobList($("seriesJobs"), state.clip_jobs.filter(job => job.settings.kind === "episode"));
+}
+
+function renderJobList(container, jobs) {
+  const seen = new Set();
+  jobs.forEach((job, index) => {
+    const story = ["story", "episode"].includes(job.settings.kind);
+    seen.add(job.id);
+    // Kartlar yalnızca klip listesi değişince yeniden çizilir; oynayan video durmasın.
+    const editor = editorState(job);
+    const signature = JSON.stringify([job.status, job.title, job.error, job.settings.layout, job.settings.facecam,
+                                      job.clips.map(c => c.title + c.description),
+                                      job.settings.mode, job.settings.camera_size,
+                                      editor.open, job.clips.map(c => [c.id, c.sent])]);
+    let card = document.getElementById("cjob-" + job.id);
+    if (!card || renderedJobs[job.id] !== signature) {
+      const fresh = document.createElement("div");
+      fresh.className = "card";
+      fresh.id = "cjob-" + job.id;
+      const actions = [];
+      if (job.status === "failed") actions.push(`<button class="small" data-act="retry">Tekrar dene</button>`);
+      if (!story && (job.status === "done" || job.status === "failed")) {
+        const layout = job.settings.layout || "auto";
+        actions.push(`<select class="layoutpick" data-layout aria-label="Düzen">${Object.entries(LAYOUT_NAMES).map(([v, l]) =>
+          `<option value="${v}" ${v === layout ? "selected" : ""}>${l}</option>`).join("")}</select>`);
+        if (MODE_NAMES[job.settings.mode || "genel"]) {
+          actions.push(`<select class="layoutpick" data-mode aria-label="An türü">${options(MODE_NAMES, job.settings.mode || "genel")}</select>`);
+        }
+        actions.push(`<select class="layoutpick" data-camsize aria-label="Kamera boyutu">${options(CAMERA_NAMES, job.settings.camera_size || "orta")}</select>`);
+        actions.push(`<button class="small" data-box>Kamera kutusu</button>`);
+      }
+      if (!story && job.status === "done") actions.push(`<button class="small" data-act="titles">Başlıkları yenile</button>`);
+      if (job.status === "done") actions.push(`<button class="small" data-act="rerun">Yeniden üret</button>`);
+      if (job.status !== "running") actions.push(`<button class="small" data-act="delete">Sil</button>`);
+      fresh.innerHTML = `
+        <div class="jobhead">
+          <div><b>${esc(job.title || job.source)}</b>
+            <div class="hint"><span class="badge ${job.status === "failed" ? "failed" : job.status === "done" ? "done" : "queued"}">${JOB_STATUS[job.status] || job.status}</span>
+            <span data-stage></span></div></div>
+          <div class="row">${actions.join("")}</div>
+        </div>
+        ${job.status === "running" ? `<div class="bar"><i data-bar></i></div>` : ""}
+        ${job.error ? `<div class="err" style="margin-top:8px">${esc(job.error)}</div>` : ""}
+        <div data-editor></div>
+        <div class="clipgrid"></div>`;
+      if (editor.open) fresh.querySelector("[data-editor]").appendChild(boxEditor(job, editor));
+      const boxButton = fresh.querySelector("[data-box]");
+      if (boxButton) boxButton.onclick = () => { editor.open = !editor.open; delete renderedJobs[job.id]; renderClipJobs(); };
+      job.clips.forEach(clip => fresh.querySelector(".clipgrid").appendChild(clipCard(clip)));
+      fresh.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+        if (b.dataset.act === "delete" && !confirm("Bu iş ve bütün klipleri silinsin mi?")) return;
+        if (b.dataset.act === "rerun" && !confirm("Mevcut klipler silinip yeniden üretilsin mi?")) return;
+        const chosen = fresh.querySelector("[data-layout]");
+        if (b.dataset.act === "rerun" && chosen && SPLIT.includes(chosen.value) && !job.settings.facecam && !state.facecam) {
+          editor.open = true; delete renderedJobs[job.id]; renderClipJobs();
+          return toast("Önce bu videonun kamera kutusunu çiz.", true);
+        }
+        const pick = name => fresh.querySelector(`[data-${name}]`)?.value;
+        post(`/api/clip-jobs/${job.id}/${b.dataset.act}`,
+             {layout: pick("layout"), mode: pick("mode"), camera_size: pick("camsize")});
+      });
+      card ? card.replaceWith(fresh) : container.appendChild(fresh);
+      card = fresh;
+      renderedJobs[job.id] = signature;
+    }
+    if (container.children[index] !== card) container.insertBefore(card, container.children[index] || null);
+    card.querySelector("[data-stage]").textContent = job.status === "running" ? job.stage : "";
+    const bar = card.querySelector("[data-bar]");
+    if (bar) bar.style.width = `${Math.round(job.progress * 100)}%`;
+  });
+  [...container.children].forEach(card => {
+    const id = Number(card.id.replace("cjob-", ""));
+    if (!seen.has(id)) { card.remove(); delete renderedJobs[id]; }
+  });
+}
+
+$("clipAsk").onchange = e => post("/api/settings", {facecam_ask: e.target.checked});
+$("clipMode").onchange = () => {
+  $("clipManualWrap").hidden = $("clipMode").value !== "elle";
+  $("clipKeywordWrap").hidden = $("clipMode").value !== "kelime";
+};
+
+const storyAuto = new Set();
+miniPicks($("storyAuto"), storyAuto);
+$("storyStart").onclick = async () => {
+  const body = {story: $("storyText").value, voice: $("storyVoice").value, style: $("storyStyle").value,
+                music: $("storyMusic").checked, auto_targets: [...storyAuto]};
+  $("storyStart").disabled = true;
+  const done = await post("/api/stories", body);
+  $("storyStart").disabled = false;
+  if (done) { $("storyText").value = ""; toast("Hikaye videosu sıraya alındı."); }
+};
+
+const seriesAuto = new Set();
+miniPicks($("seriesAuto"), seriesAuto);
+$("seriesStart").onclick = async () => {
+  const body = {premise: $("seriesPremise").value, episodes: $("seriesEpisodes").value, vote_hours: $("seriesHours").value,
+                voice: $("seriesVoice").value, style: $("seriesStyle").value, music: $("seriesMusic").checked,
+                auto_targets: [...seriesAuto]};
+  $("seriesStart").disabled = true;
+  const done = await post("/api/series", body);
+  $("seriesStart").disabled = false;
+  if (done) { $("seriesPremise").value = ""; toast("Dizi başladı, 1. bölüm hazırlanıyor."); }
+};
+
+const EPISODE_STATUS = {producing: "Üretiliyor", ready: "Yayın bekliyor", voting: "Oylamada", decided: "Bitti"};
+const SERIES_STATUS = {active: "Devam ediyor", stopped: "Durduruldu", finished: "Tamamlandı"};
+let seriesSignature = "";
+
+function remaining(deadline) {
+  const left = deadline - state.now;
+  if (left <= 0) return "süre doldu";
+  const hours = Math.floor(left / 3600), minutes = Math.floor(left % 3600 / 60);
+  return hours ? `${hours} sa ${minutes} dk kaldı` : `${minutes} dk kaldı`;
+}
+
+function renderSeries() {
+  // Oylar ve kalan süre her yenilemede değişir; yalnızca bir şey değiştiyse yeniden çizilir.
+  const signature = JSON.stringify([state.series, Math.floor(state.now / 60)]);
+  if (signature === seriesSignature) return;
+  seriesSignature = signature;
+  $("seriesList").innerHTML = state.series.map(series => `
+    <div class="card">
+      <div class="jobhead">
+        <div><b>${esc(series.title)}</b>
+          <div class="hint"><span class="badge ${series.status === "active" ? "queued" : "done"}">${SERIES_STATUS[series.status] || series.status}</span>
+          ${series.settings.episodes} bölüm · oylama ${series.settings.vote_hours} saat</div></div>
+        <div class="row">
+          ${series.status === "active" ? `<button class="small" data-series="${series.id}" data-sact="stop">Durdur</button>` : ""}
+          ${series.status === "stopped" ? `<button class="small" data-series="${series.id}" data-sact="resume">Devam ettir</button>` : ""}
+          <button class="small" data-series="${series.id}" data-sact="delete">Sil</button>
+        </div>
+      </div>
+      <div class="tablewrap" style="margin-top:10px"><table>
+        <thead><tr><th>Bölüm</th><th>Durum</th><th>A</th><th>B</th><th></th></tr></thead>
+        <tbody>${series.episodes.map(ep => {
+          const a = ep.votes_a + ep.manual_a, b = ep.votes_b + ep.manual_b;
+          const open = ep.status === "voting" || ep.status === "ready";
+          const actions = [];
+          if (ep.status === "ready") actions.push(`<button class="small" data-ep="${ep.id}" data-eact="start-voting">Oylamayı başlat</button>`);
+          if (ep.status === "voting") actions.push(`<button class="small" data-ep="${ep.id}" data-eact="count">Oyları say</button>`);
+          if (open && ep.option_a) {
+            actions.push(`<button class="small" data-ep="${ep.id}" data-eact="votes">Elle oy ekle</button>`);
+            actions.push(`<button class="small" data-ep="${ep.id}" data-eact="decide-a">A kazansın</button>`);
+            actions.push(`<button class="small" data-ep="${ep.id}" data-eact="decide-b">B kazansın</button>`);
+          }
+          const win = side => ep.winner === side ? " ✓" : "";
+          return `<tr><td><b>${ep.number}</b><div class="hint">${esc(ep.title)}</div></td>
+            <td><span class="badge ${ep.status === "decided" ? "done" : "queued"}">${EPISODE_STATUS[ep.status] || ep.status}</span>
+              ${ep.status === "voting" && ep.deadline ? `<div class="hint">${remaining(ep.deadline)}</div>` : ""}
+              ${ep.vote_note ? `<div class="err">${esc(ep.vote_note)}</div>` : ""}</td>
+            <td>${esc(ep.option_a || "-")}<div class="hint">${a} oy${win("A")}</div></td>
+            <td>${esc(ep.option_b || "-")}<div class="hint">${b} oy${win("B")}</div></td>
+            <td><div class="row">${actions.join("")}</div></td></tr>`;
+        }).join("")}</tbody>
+      </table></div>
+    </div>`).join("");
+  document.querySelectorAll("[data-sact]").forEach(button => button.onclick = () => {
+    if (button.dataset.sact === "delete" && !confirm("Dizi silinsin mi? Üretilmiş videolar kalır.")) return;
+    post(`/api/series/${button.dataset.series}/${button.dataset.sact}`);
+  });
+  document.querySelectorAll("[data-eact]").forEach(button => button.onclick = () => {
+    if (button.dataset.eact === "votes") {
+      const a = Number(prompt("A için eklenecek oy (TikTok, hikâye anketi vb.):", "0") || 0);
+      const b = Number(prompt("B için eklenecek oy:", "0") || 0);
+      return post(`/api/episodes/${button.dataset.ep}/votes`, {a, b});
+    }
+    if (button.dataset.eact.startsWith("decide") && !confirm("Oylama bitirilip sonraki bölüm bu seçimle üretilsin mi?")) return;
+    post(`/api/episodes/${button.dataset.ep}/${button.dataset.eact}`);
+  });
+}
+
+async function refresh() {
+  const response = await fetch("/api/state");
+  state = await response.json();
+  $("dryrun").hidden = !state.dry_run;
+  renderPicks(); renderStats(); renderJobs(); renderAccounts(); renderClipJobs(); renderSeries();
+  if (document.activeElement !== $("clipAsk")) $("clipAsk").checked = state.facecam_ask;
+  if (!schedulesBuilt) buildSchedules();
+  renderScheduleStatus();
+}
+updateWhen();
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

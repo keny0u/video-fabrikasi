@@ -1,0 +1,14 @@
+.venv/
+.venv-*/
+secrets/
+muzik/
+.env
+.claude/
+fabrika.db*
+fabrika.log
+inbox/
+kutuphane/
+arsiv/
+__pycache__/
+.pytest_cache/
+klipler/
